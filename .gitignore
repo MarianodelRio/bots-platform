@@ -1,0 +1,41 @@
+# ── Credentials & secrets ─────────────────────────────────────────────────────
+.env
+*.json
+!.env.example
+
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+*.egg
+dist/
+build/
+.eggs/
+
+# ── Virtual environments ───────────────────────────────────────────────────────
+venv/
+.venv/
+env/
+.env/
+
+# ── Testing & coverage ────────────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+*.log
+logs.txt
+logs/
+
+# ── IDEs ──────────────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+tests/configs/google_calendar_tenant.yaml

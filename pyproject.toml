@@ -1,0 +1,35 @@
+[project]
+name = "platform"
+requires-python = ">=3.12"
+version = "0.1.0"
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+    "pyyaml",
+    "tenacity>=8.2",
+    "httpx",
+    "google-api-python-client>=2.131",
+    "google-auth-httplib2>=0.2",
+    "google-auth>=2.29",
+    "httplib2>=0.22",
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "ruff",
+    "mypy",
+]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+
+[tool.mypy]
+strict = false
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
