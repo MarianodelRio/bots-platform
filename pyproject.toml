@@ -12,6 +12,10 @@ dependencies = [
     "google-auth-httplib2>=0.2",
     "google-auth>=2.29",
     "httplib2>=0.22",
+    "sqlalchemy[asyncio]>=2.0",
+    "alembic>=1.13",
+    "asyncpg>=0.29",
+    "cryptography>=42",
 ]
 
 [dependency-groups]
@@ -19,6 +23,7 @@ dev = [
     "pytest",
     "ruff",
     "mypy",
+    "aiosqlite>=0.20",
 ]
 
 [tool.ruff]

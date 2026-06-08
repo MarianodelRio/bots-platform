@@ -7,6 +7,16 @@ services:
       - "8001:8001"
     environment:
       - PYTHONPATH=/app
+      # Async Postgres URL for the Control Plane database
+      - DATABASE_URL=postgresql+asyncpg://platform:platform@postgres:5432/platform
+      # DEV PLACEHOLDER — generate a real key with:
+      #   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+      # Never commit production secrets.
+      - ENCRYPTION_KEY=0gdkyDyOo3ekqTfcIBh3kdV1frqMM_ND1XjV4G8EYow=
+    depends_on:
+      postgres:
+        condition: service_started
+
   data_plane:
     build:
       context: .
@@ -15,6 +25,14 @@ services:
       - "8002:8002"
     environment:
       - PYTHONPATH=/app
+      # Option A — local YAML config (legacy mode)
+      # - TENANT_CONFIG_PATH=/app/config/tenant.yaml
+      #
+      # Option B — pull config from Control Plane at boot time
+      # - CONTROL_PLANE_URL=http://control_plane:8001
+      # - TENANT_ID=<your_tenant_id>
+      # - BOOT_TOKEN=<your_boot_token>
+
   postgres:
     image: postgres:16-alpine
     environment:
@@ -25,5 +43,6 @@ services:
       - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+
 volumes:
   pgdata:

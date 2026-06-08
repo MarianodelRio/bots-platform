@@ -20,7 +20,19 @@ log = logging.getLogger(__name__)
 def create_app() -> FastAPI:
     @asynccontextmanager
     async def _lifespan(app: FastAPI):
-        config = load_tenant_config(os.environ["TENANT_CONFIG_PATH"])
+        cp_url = os.environ.get("CONTROL_PLANE_URL")
+        if cp_url:
+            from data_plane.config import build_tenant_config_from_cp_payload
+            from data_plane.cp_client import pull_tenant_config
+            payload = await pull_tenant_config(
+                cp_url,
+                os.environ["TENANT_ID"],
+                os.environ["BOOT_TOKEN"],
+            )
+            config = build_tenant_config_from_cp_payload(payload)
+        else:
+            config = load_tenant_config(os.environ["TENANT_CONFIG_PATH"])
+
         adapter, router = channel_factory(config.channel, config.tenant_id)
         app.include_router(router)
 
@@ -38,9 +50,10 @@ def create_app() -> FastAPI:
             from data_plane.connectors.registry import ConnectorRegistry
 
             cal_cfg = config.connectors.calendar
-            if cal_cfg.credentials_path is None:
+            if cal_cfg.credentials_path is None and cal_cfg.credentials_dict is None:
                 raise ValueError(
-                    "[MAIN] google_calendar connector requires 'credentials_path' in tenant config"
+                    "[MAIN] google_calendar connector requires"
+                    " 'credentials_path' or 'credentials_dict' in tenant config"
                 )
             if cal_cfg.calendar_id is None:
                 raise ValueError(
@@ -48,6 +61,7 @@ def create_app() -> FastAPI:
                 )
             google_adapter = GoogleCalendarAdapter(
                 credentials_path=cal_cfg.credentials_path,
+                credentials_dict=cal_cfg.credentials_dict,
                 calendar_id=cal_cfg.calendar_id,
                 schedule=cal_cfg.schedule or {},
                 timezone=cal_cfg.timezone,

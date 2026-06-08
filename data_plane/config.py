@@ -21,6 +21,7 @@ class ChannelConfig:
 class CalendarConnectorConfig:
     type: str
     credentials_path: str | None = None
+    credentials_dict: dict | None = None
     calendar_id: str | None = None
     timezone: str = "Europe/Madrid"
     slot_duration_min: int = 30
@@ -86,6 +87,58 @@ def load_tenant_config(path: str) -> TenantConfig:
     return TenantConfig(
         tenant_id=raw["tenant_id"],
         flow_path=flow_path,
+        channel=channel,
+        connectors=connectors,
+    )
+
+
+def build_tenant_config_from_cp_payload(payload: dict) -> TenantConfig:
+    """Construct a TenantConfig from the JSON blob returned by the Control Plane.
+
+    The CP payload has this shape::
+
+        {
+            "tenant_id": "...",
+            "flow_path": "...",
+            "channel": {"type": "...", "identifier": "..."},
+            "connectors": {
+                "calendar": {
+                    "type": "google_calendar",
+                    "calendar_id": "...",
+                    "timezone": "...",
+                    ...
+                    "credentials_dict": {...}
+                }
+            }
+        }
+    """
+    channel_raw: dict = payload["channel"]
+    channel = ChannelConfig(
+        type=channel_raw["type"],
+        phone_number_id=channel_raw.get("identifier"),
+        access_token=channel_raw.get("access_token"),
+        app_secret=channel_raw.get("app_secret"),
+        verify_token=channel_raw.get("verify_token"),
+    )
+
+    connectors_raw: dict = payload.get("connectors", {})
+    calendar_raw: dict = connectors_raw.get("calendar", {"type": "mock"})
+    calendar = CalendarConnectorConfig(
+        type=calendar_raw.get("type", "mock"),
+        credentials_path=calendar_raw.get("credentials_path"),
+        credentials_dict=calendar_raw.get("credentials_dict"),
+        calendar_id=calendar_raw.get("calendar_id"),
+        timezone=calendar_raw.get("timezone", "Europe/Madrid"),
+        slot_duration_min=calendar_raw.get("slot_duration_min", 30),
+        lookahead_days_client=calendar_raw.get("lookahead_days_client", 14),
+        lookahead_days_manual=calendar_raw.get("lookahead_days_manual", 60),
+        schedule=calendar_raw.get("schedule"),
+    )
+    connectors = ConnectorsConfig(calendar=calendar)
+
+    return TenantConfig(
+        tenant_id=payload["tenant_id"],
+        flow_path=payload["flow_path"],
         channel=channel,
         connectors=connectors,
     )

@@ -27,18 +27,19 @@ class GoogleCalendarAdapter(CalendarConnector):
 
     def __init__(
         self,
-        credentials_path: str,
-        calendar_id: str,
-        schedule: dict[str, list[str]],
+        credentials_path: str | None = None,
+        calendar_id: str = "",
+        schedule: dict[str, list[str]] | None = None,
         timezone: str = "Europe/Madrid",
         slot_duration_min: int = 30,
         lookahead_days_client: int = 14,
         lookahead_days_manual: int = 60,
         *,
+        credentials_dict: dict | None = None,
         _repo: EventsRepository | None = None,
     ) -> None:
         self._calendar_id = calendar_id
-        self._schedule = schedule
+        self._schedule = schedule or {}
         self._timezone = timezone
         self._slot_duration_min = slot_duration_min
         self._lookahead_days_client = lookahead_days_client
@@ -47,7 +48,10 @@ class GoogleCalendarAdapter(CalendarConnector):
         if _repo is not None:
             self._repo = _repo
         else:
-            client = CalendarClient(credentials_path=credentials_path)
+            client = CalendarClient(
+                credentials_path=credentials_path,
+                credentials_dict=credentials_dict,
+            )
             self._repo = EventsRepository(client, calendar_id, timezone)
 
     # ------------------------------------------------------------------
