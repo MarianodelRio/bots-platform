@@ -44,6 +44,8 @@ class Bot:
                     created_at=datetime.utcnow(),
                     updated_at=datetime.utcnow(),
                 )
+            elif state.current_state not in self._flow.states:
+                state.current_state = self._flow.initial_state
 
             state.data["today"] = date.today().isoformat()
             new_state, outputs = self._interpreter.process(

@@ -39,6 +39,8 @@ async def get_config(
     except ValueError as e:
         if str(e) == "no_channel_binding":
             raise HTTPException(status_code=404, detail="no_channel_binding")
+        if "no_active_flow" in str(e):
+            raise HTTPException(status_code=404, detail="no_active_flow")
         raise
 
     if config is None:

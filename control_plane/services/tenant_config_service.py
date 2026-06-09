@@ -3,7 +3,14 @@ import json
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from control_plane.models import ChannelBinding, ConnectorBinding, Tenant, TenantCredential
+from control_plane.models import (
+    ChannelBinding,
+    ConnectorBinding,
+    Flow,
+    FlowVersion,
+    Tenant,
+    TenantCredential,
+)
 from control_plane.services.encryption import decrypt
 
 
@@ -44,6 +51,22 @@ async def get_tenant_boot_config(tenant_id: str, session: AsyncSession) -> dict 
             cfg["credentials_dict"] = credentials[cb.category]
         connectors[cb.category] = cfg
 
+    # Fetch flow and active flow version
+    flow_result = await session.execute(select(Flow).where(Flow.tenant_id == tenant_id))
+    flow = flow_result.scalar_one_or_none()
+    if flow is None:
+        raise ValueError("no_active_flow")
+
+    fv_result = await session.execute(
+        select(FlowVersion).where(
+            FlowVersion.flow_id == flow.id,
+            FlowVersion.is_active == True,  # noqa: E712
+        )
+    )
+    flow_version = fv_result.scalar_one_or_none()
+    if flow_version is None:
+        raise ValueError("no_active_flow")
+
     # Use first channel binding as the primary channel
     ch = channels[0]
 
@@ -60,7 +83,7 @@ async def get_tenant_boot_config(tenant_id: str, session: AsyncSession) -> dict 
 
     return {
         "tenant_id": tenant_id,
-        "flow_path": tenant.flow_path,
+        "flow_content": flow_version.yaml_content,
         "channel": ch_dict,
         "connectors": connectors,
     }

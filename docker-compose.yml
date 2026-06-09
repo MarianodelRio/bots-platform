@@ -13,6 +13,7 @@ services:
       #   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
       # Never commit production secrets.
       - ENCRYPTION_KEY=0gdkyDyOo3ekqTfcIBh3kdV1frqMM_ND1XjV4G8EYow=
+      - ADMIN_API_KEY=dev-admin-key-change-in-prod
     depends_on:
       postgres:
         condition: service_started

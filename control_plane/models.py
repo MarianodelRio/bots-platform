@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import JSON, DateTime, ForeignKey, Text, UniqueConstraint
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, Text, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -18,7 +18,6 @@ class Tenant(Base):
     id: Mapped[str] = mapped_column(Text, primary_key=True, default=lambda: str(uuid.uuid4()))
     name: Mapped[str] = mapped_column(Text)
     status: Mapped[str] = mapped_column(Text, default="active")
-    flow_path: Mapped[str | None] = mapped_column(Text, nullable=True)
     boot_token_hash: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
@@ -81,3 +80,33 @@ class Contact(Base):
     __table_args__ = (UniqueConstraint("tenant_id", "channel_type", "channel_user_id"),)
 
     tenant: Mapped["Tenant"] = relationship(back_populates="contacts")
+
+
+class Flow(Base):
+    __tablename__ = "flows"
+
+    id: Mapped[str] = mapped_column(Text, primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id: Mapped[str] = mapped_column(Text, ForeignKey("tenants.id"), nullable=False)
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    origin_template_id: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    __table_args__ = (UniqueConstraint("tenant_id"),)
+
+    versions: Mapped[list["FlowVersion"]] = relationship(back_populates="flow")
+
+
+class FlowVersion(Base):
+    __tablename__ = "flow_versions"
+
+    id: Mapped[str] = mapped_column(Text, primary_key=True, default=lambda: str(uuid.uuid4()))
+    flow_id: Mapped[str] = mapped_column(Text, ForeignKey("flows.id"), nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    yaml_content: Mapped[str] = mapped_column(Text, nullable=False)
+    checksum: Mapped[str] = mapped_column(Text, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    __table_args__ = (UniqueConstraint("flow_id", "version"),)
+
+    flow: Mapped["Flow"] = relationship(back_populates="versions")

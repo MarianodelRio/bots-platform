@@ -40,7 +40,7 @@ class ConnectorsConfig:
 @dataclass
 class TenantConfig:
     tenant_id: str
-    flow_path: str
+    flow_content: str
     channel: ChannelConfig
     connectors: ConnectorsConfig = field(default_factory=ConnectorsConfig)
 
@@ -49,17 +49,19 @@ def load_tenant_config(path: str) -> TenantConfig:
     """Load TenantConfig from a YAML file.
 
     Relative ``flow_path`` values are resolved relative to the directory
-    containing the YAML file.
+    containing the YAML file. The flow file content is read and stored as
+    ``flow_content``.
     """
     yaml_path = Path(path)
     raw = yaml.safe_load(yaml_path.read_text())
 
-    # Resolve flow_path relative to the YAML file's directory
+    # Resolve flow_path relative to the YAML file's directory, then read content
     flow_path_raw: str = raw["flow_path"]
     if not Path(flow_path_raw).is_absolute():
-        flow_path = str((yaml_path.parent / flow_path_raw).resolve())
+        resolved_path = str((yaml_path.parent / flow_path_raw).resolve())
     else:
-        flow_path = flow_path_raw
+        resolved_path = flow_path_raw
+    flow_content = Path(resolved_path).read_text()
 
     channel_raw: dict = raw["channel"]
     channel = ChannelConfig(
@@ -86,7 +88,7 @@ def load_tenant_config(path: str) -> TenantConfig:
 
     return TenantConfig(
         tenant_id=raw["tenant_id"],
-        flow_path=flow_path,
+        flow_content=flow_content,
         channel=channel,
         connectors=connectors,
     )
@@ -99,7 +101,7 @@ def build_tenant_config_from_cp_payload(payload: dict) -> TenantConfig:
 
         {
             "tenant_id": "...",
-            "flow_path": "...",
+            "flow_content": "...",
             "channel": {"type": "...", "identifier": "..."},
             "connectors": {
                 "calendar": {
@@ -138,7 +140,7 @@ def build_tenant_config_from_cp_payload(payload: dict) -> TenantConfig:
 
     return TenantConfig(
         tenant_id=payload["tenant_id"],
-        flow_path=payload["flow_path"],
+        flow_content=payload["flow_content"],
         channel=channel,
         connectors=connectors,
     )

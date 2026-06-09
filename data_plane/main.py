@@ -1,7 +1,6 @@
 import logging
 import os
 from contextlib import asynccontextmanager
-from pathlib import Path
 
 from fastapi import FastAPI
 
@@ -36,7 +35,7 @@ def create_app() -> FastAPI:
         adapter, router = channel_factory(config.channel, config.tenant_id)
         app.include_router(router)
 
-        flow = load_flow(Path(config.flow_path).read_text())
+        flow = load_flow(config.flow_content)
         state_store = SQLiteStateStore(db_path=os.environ.get("STATE_DB_PATH", "/data/state.db"))
 
         calendar_type = config.connectors.calendar.type

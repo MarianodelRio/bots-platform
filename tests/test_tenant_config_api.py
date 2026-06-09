@@ -10,6 +10,8 @@ import hashlib
 import json
 import os
 import uuid
+from pathlib import Path
+from uuid import uuid4
 
 # Pin anyio to asyncio backend for all tests in this module.
 anyio_backend = "asyncio"
@@ -30,6 +32,7 @@ os.environ.setdefault("ENCRYPTION_KEY", _TEST_FERNET_KEY)
 # Also ensure DATABASE_URL resolves to SQLite so the engine created in database.py
 # does not attempt a Postgres connection during import.
 os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///")
+os.environ.setdefault("ADMIN_API_KEY", "test-admin-key")
 
 from control_plane.database import get_db  # noqa: E402
 from control_plane.main import app  # noqa: E402
@@ -37,6 +40,8 @@ from control_plane.models import (  # noqa: E402
     Base,
     ChannelBinding,
     ConnectorBinding,
+    Flow,
+    FlowVersion,
     Tenant,
     TenantCredential,
 )
@@ -74,6 +79,9 @@ _TENANT2_ID = "otra_tienda"
 _BOOT_TOKEN2 = "othertoken"
 _TOKEN_HASH2 = hashlib.sha256(_BOOT_TOKEN2.encode()).hexdigest()
 
+# Path to peluqueria flow YAML (root of project)
+_PELUQUERIA_FLOW_PATH = Path(__file__).parent.parent / "flows" / "peluqueria_flow.yaml"
+
 
 async def _seed(session: AsyncSession) -> None:
     # Primary tenant
@@ -81,7 +89,6 @@ async def _seed(session: AsyncSession) -> None:
         id=_TENANT_ID,
         name="Peluqueria Sur",
         status="active",
-        flow_path="/app/flows/peluqueria.yaml",
         boot_token_hash=_TOKEN_HASH,
     )
     session.add(tenant)
@@ -112,12 +119,27 @@ async def _seed(session: AsyncSession) -> None:
     )
     session.add(connector)
 
+    # Create Flow and active FlowVersion for primary tenant
+    yaml_content = _PELUQUERIA_FLOW_PATH.read_text()
+    checksum = hashlib.sha256(yaml_content.encode()).hexdigest()
+    flow = Flow(id=str(uuid4()), tenant_id=_TENANT_ID, name="peluqueria")
+    session.add(flow)
+    await session.flush()
+    flow_version = FlowVersion(
+        id=str(uuid4()),
+        flow_id=flow.id,
+        version=1,
+        yaml_content=yaml_content,
+        checksum=checksum,
+        is_active=True,
+    )
+    session.add(flow_version)
+
     # Second tenant (for isolation testing)
     tenant2 = Tenant(
         id=_TENANT2_ID,
         name="Otra Tienda",
         status="active",
-        flow_path="/app/flows/otra.yaml",
         boot_token_hash=_TOKEN_HASH2,
     )
     session.add(tenant2)
@@ -174,7 +196,8 @@ async def test_get_config_success(client: AsyncClient):
     assert response.status_code == 200
     body = response.json()
     assert body["tenant_id"] == _TENANT_ID
-    assert "flow_path" in body
+    assert "flow_content" in body
+    assert isinstance(body["flow_content"], str)
     assert "channel" in body
     assert "connectors" in body
 
@@ -231,7 +254,6 @@ async def test_get_config_no_channel_binding(client: AsyncClient):
             id="no_channel_tenant",
             name="No Channel",
             status="active",
-            flow_path="/app/flows/test.yaml",
             boot_token_hash=no_channel_hash,
         )
         session.add(tenant_nc)
