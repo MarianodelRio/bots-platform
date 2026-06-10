@@ -1,5 +1,5 @@
 # Run all targets from the platform/ directory
-.PHONY: run-control-plane run-data-plane up down clean test lint format help
+.PHONY: run-control-plane run-data-plane up down clean test lint format seed-f8 help
 
 run-control-plane:
 	PYTHONPATH=. uv run uvicorn control_plane.main:app --host 0.0.0.0 --port 8001 --reload
@@ -24,6 +24,13 @@ lint:
 
 format:
 	uv run ruff format .
+
+seed-f8:
+	PYTHONPATH=. \
+	DATABASE_URL=postgresql+asyncpg://platform:platform@localhost:5433/platform \
+	ADMIN_API_KEY=dev-admin-key-change-in-prod \
+	CONTROL_PLANE_URL=http://localhost:8001 \
+	uv run python scripts/seed_f8.py
 
 help:
 	@echo ""

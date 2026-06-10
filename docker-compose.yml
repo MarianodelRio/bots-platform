@@ -17,22 +17,48 @@ services:
     depends_on:
       postgres:
         condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8001/health')\""]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
 
   data_plane:
     build:
       context: .
       dockerfile: data_plane/Dockerfile
     ports:
-      - "8002:8002"
+      - "8002:8000"
     environment:
       - PYTHONPATH=/app
-      # Option A — local YAML config (legacy mode)
-      # - TENANT_CONFIG_PATH=/app/config/tenant.yaml
-      #
-      # Option B — pull config from Control Plane at boot time
-      # - CONTROL_PLANE_URL=http://control_plane:8001
-      # - TENANT_ID=<your_tenant_id>
-      # - BOOT_TOKEN=<your_boot_token>
+      - CONTROL_PLANE_URL=http://control_plane:8001
+      - TENANT_ID=peluqueria_sur
+      - BOOT_TOKEN=sur-boot-2024
+      - STATE_DB_PATH=/data/state.db
+    volumes:
+      - dp1_state:/data
+    depends_on:
+      control_plane:
+        condition: service_healthy
+
+  data_plane_2:
+    build:
+      context: .
+      dockerfile: data_plane/Dockerfile
+    ports:
+      - "8003:8000"
+    environment:
+      - PYTHONPATH=/app
+      - CONTROL_PLANE_URL=http://control_plane:8001
+      - TENANT_ID=peluqueria_norte
+      - BOOT_TOKEN=norte-boot-2024
+      - STATE_DB_PATH=/data/state.db
+    volumes:
+      - dp2_state:/data
+    depends_on:
+      control_plane:
+        condition: service_healthy
 
   postgres:
     image: postgres:16-alpine
@@ -47,3 +73,5 @@ services:
 
 volumes:
   pgdata:
+  dp1_state:
+  dp2_state:
